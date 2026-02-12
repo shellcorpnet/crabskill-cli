@@ -138,6 +138,11 @@ async function publishSkill(directory) {
     formData.append('min_openclaw_version', skillJson.min_openclaw_version || skillJson.openclaw.minVersion);
   }
 
+  // Emoji — from skill.json or auto-suggest based on skill name/description
+  if (skillJson.emoji) {
+    formData.append('emoji', skillJson.emoji);
+  }
+
   // Publish via API
   const result = await api.publishSkill(formData);
   

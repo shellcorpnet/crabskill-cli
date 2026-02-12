@@ -1,0 +1,18 @@
+{
+  "name": "crabskill",
+  "version": "1.0.0",
+  "description": "Browse, install, publish, purchase, and manage skills from the CrabSkill.com marketplace",
+  "author": "shellcorp",
+  "license": "MIT",
+  "keywords": ["marketplace", "skills", "install", "publish", "crabskill"],
+  "openclaw": {
+    "minVersion": "2026.1.0",
+    "platforms": ["macos", "linux"],
+    "channels": [],
+    "tools": ["exec", "web_fetch"],
+    "dependencies": []
+  },
+  "pricing": {
+    "type": "free"
+  }
+}
