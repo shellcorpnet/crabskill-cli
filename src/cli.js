@@ -722,6 +722,82 @@ program
     console.log(chalk.green('\n✓ Logged out successfully.\n'));
   });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// AUDIT
+// ═══════════════════════════════════════════════════════════════════════════════
+program
+  .command('audit <slug>')
+  .description('View the latest security audit for a skill')
+  .action(async (slug) => {
+    const spinner = ora(`Fetching security audit for ${chalk.cyan(slug)}...`).start();
+
+    try {
+      const audit = await api.getAudit(slug);
+      spinner.stop();
+
+      const verdictMap = {
+        pass: { emoji: '✅', label: 'PASS', color: chalk.green },
+        warn: { emoji: '⚠️', label: 'WARN', color: chalk.yellow },
+        fail: { emoji: '❌', label: 'FAIL', color: chalk.red },
+      };
+      const v = verdictMap[audit.verdict] || { emoji: '⏳', label: 'PENDING', color: chalk.dim };
+
+      console.log();
+      console.log(chalk.bold(`🦀 Security Audit — ${slug}`));
+      console.log();
+      console.log(chalk.dim('Verdict:        ') + v.color(`${v.emoji} ${v.label}`));
+
+      // Risk score with color coding
+      const riskColor = audit.risk_score <= 3 ? chalk.green : audit.risk_score <= 6 ? chalk.yellow : chalk.red;
+      console.log(chalk.dim('Risk Score:     ') + riskColor(`${audit.risk_score}/10`));
+      console.log(chalk.dim('Version:        ') + (audit.version || 'unknown'));
+      console.log(chalk.dim('Files Analyzed: ') + (audit.files_analyzed || 0));
+      console.log(chalk.dim('Model:          ') + (audit.model_used || 'unknown'));
+      console.log(chalk.dim('Date:           ') + new Date(audit.created_at).toLocaleDateString());
+
+      if (audit.summary) {
+        console.log();
+        console.log(chalk.dim('Summary:'));
+        console.log(`  ${audit.summary}`);
+      }
+
+      if (audit.findings && audit.findings.length > 0) {
+        console.log();
+        console.log(chalk.bold(`📋 Findings (${audit.findings.length}):\n`));
+
+        for (const finding of audit.findings) {
+          const sevColor = finding.severity === 'critical' || finding.severity === 'high'
+            ? chalk.red
+            : finding.severity === 'medium' ? chalk.yellow : chalk.dim;
+
+          console.log(sevColor(`  [${(finding.severity || 'info').toUpperCase()}]`) + ` ${finding.category || ''}`);
+          if (finding.description) {
+            console.log(chalk.dim(`    ${finding.description}`));
+          }
+          if (finding.file) {
+            console.log(chalk.dim(`    File: ${finding.file}`));
+          }
+          if (finding.recommendation) {
+            console.log(chalk.cyan(`    → ${finding.recommendation}`));
+          }
+          console.log();
+        }
+      } else {
+        console.log(chalk.green('\n  No findings — looking clean! 🎉'));
+      }
+
+      console.log();
+
+    } catch (err) {
+      if (err.status === 404) {
+        spinner.info(`No security audit available for ${chalk.cyan(slug)}`);
+      } else {
+        spinner.fail(`Failed to fetch audit: ${err.message}`);
+        process.exit(1);
+      }
+    }
+  });
+
 // Categories command
 program
   .command('categories')

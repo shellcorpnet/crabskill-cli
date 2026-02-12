@@ -81,6 +81,10 @@ class CrabSkillAPI {
     return this.request('/categories');
   }
 
+  async getAudit(slug) {
+    return this.request(`/skills/${slug}/audit`);
+  }
+
   async getFeatured() {
     return this.request('/featured');
   }
