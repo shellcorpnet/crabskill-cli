@@ -472,6 +472,27 @@ program
     const spinner = ora('Packaging skill...').start();
     
     try {
+      // Check if paid skill needs Stripe Connect
+      const skillJsonPath = path.join(absDir, 'skill.json');
+      if (require('fs').existsSync(skillJsonPath)) {
+        const skillJson = JSON.parse(require('fs').readFileSync(skillJsonPath, 'utf8'));
+        const pricingType = skillJson.pricing && skillJson.pricing.type;
+        if (pricingType && pricingType !== 'free') {
+          try {
+            const sellerStatus = await api.sellerStatus();
+            if (!sellerStatus.stripe_connected) {
+              spinner.stop();
+              console.log(chalk.yellow('\n⚠️  Paid skills require Stripe Connect.'));
+              console.log(chalk.dim('   Visit ') + chalk.cyan('https://crabskill.com/seller') + chalk.dim(' to connect your Stripe account first.'));
+              console.log(chalk.dim('   Or run: ') + chalk.cyan('crabskill seller setup') + chalk.dim('\n'));
+              process.exit(1);
+            }
+          } catch {
+            // If seller status check fails, let the server validate
+          }
+        }
+      }
+
       spinner.text = 'Validating and packaging...';
       const result = await publisher.publishSkill(directory);
       
@@ -509,6 +530,11 @@ program
         console.log(chalk.yellow('\n⚠️  Your email is not verified.'));
         console.log(chalk.dim('   Log in at crabskill.com to verify your email, then try again.'));
         console.log(chalk.dim('   Or run: ') + chalk.cyan('crabskill login') + chalk.dim(' with a verified account.'));
+      } else if (err.message && err.message.includes('Stripe Connect')) {
+        spinner.fail('Stripe Connect required for paid skills.');
+        console.log(chalk.yellow('\n⚠️  Paid skills require Stripe Connect.'));
+        console.log(chalk.dim('   Visit ') + chalk.cyan('https://crabskill.com/seller') + chalk.dim(' to connect your Stripe account first.'));
+        console.log(chalk.dim('   Or run: ') + chalk.cyan('crabskill seller setup') + chalk.dim('\n'));
       } else {
         spinner.fail(`Publish failed: ${err.message}`);
       }
