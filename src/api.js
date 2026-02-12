@@ -167,6 +167,10 @@ class CrabSkillAPI {
       authenticated: true,
     });
   }
+
+  async getCategories() {
+    return this.request('/categories');
+  }
 }
 
 module.exports = new CrabSkillAPI();

@@ -722,5 +722,29 @@ program
     console.log(chalk.green('\n✓ Logged out successfully.\n'));
   });
 
+// Categories command
+program
+  .command('categories')
+  .alias('cats')
+  .description('List all skill categories')
+  .action(async () => {
+    const spinner = ora('Fetching categories...').start();
+    try {
+      const categories = await api.getCategories();
+      spinner.stop();
+      console.log(chalk.bold('\n🦀 Skill Categories:\n'));
+      console.log(chalk.dim('  Use the slug in your skill.json "category" field.\n'));
+      for (const cat of categories) {
+        console.log(`  ${cat.icon}  ${chalk.white.bold(cat.name)} ${chalk.dim('→')} ${chalk.cyan(cat.slug)}`);
+        if (cat.description) {
+          console.log(`      ${chalk.dim(cat.description)}`);
+        }
+      }
+      console.log();
+    } catch (err) {
+      spinner.fail('Failed to fetch categories: ' + err.message);
+    }
+  });
+
 // Parse and run
 program.parse();

@@ -114,13 +114,21 @@ async function publishSkill(directory) {
   formData.append('description', description);
   formData.append('tagline', skillJson.description || description.substring(0, 255));
   formData.append('version', skillJson.version || '1.0.0');
-  formData.append('pricing_type', (skillJson.pricing && skillJson.pricing.type) || 'free');
+  formData.append('pricing_type', skillJson.pricing_type || (skillJson.pricing && skillJson.pricing.type) || 'free');
 
-  if (skillJson.keywords) {
-    skillJson.keywords.forEach(tag => formData.append('tags[]', tag));
+  // Category (slug or name)
+  if (skillJson.category) {
+    formData.append('category', skillJson.category);
   }
-  if (skillJson.openclaw && skillJson.openclaw.minVersion) {
-    formData.append('min_openclaw_version', skillJson.openclaw.minVersion);
+
+  // Tags — support both "tags" and "keywords" fields
+  const tags = skillJson.tags || skillJson.keywords || [];
+  if (tags.length) {
+    tags.forEach(tag => formData.append('tags[]', tag));
+  }
+
+  if (skillJson.min_openclaw_version || (skillJson.openclaw && skillJson.openclaw.minVersion)) {
+    formData.append('min_openclaw_version', skillJson.min_openclaw_version || skillJson.openclaw.minVersion);
   }
 
   // Publish via API
