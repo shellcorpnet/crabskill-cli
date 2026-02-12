@@ -1,6 +1,6 @@
 {
   "name": "crabskill",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "description": "CLI for the CrabSkill agent skill marketplace",
   "main": "src/cli.js",
   "bin": {
