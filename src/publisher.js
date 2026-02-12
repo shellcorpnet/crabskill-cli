@@ -84,19 +84,45 @@ async function publishSkill(directory) {
   const { buffer, skillMd, directory: absDir } = await validateAndPackage(directory);
   
   // Create form data with the zip
+  // Load skill.json for metadata
+  const skillJsonPath = path.join(absDir, 'skill.json');
+  let skillJson = {};
+  if (fs.existsSync(skillJsonPath)) {
+    skillJson = JSON.parse(fs.readFileSync(skillJsonPath, 'utf8'));
+  }
+
+  // Extract name from SKILL.md frontmatter or heading
+  const nameMatch = skillMd.match(/^#\s+(.+)$/m);
+  const fmNameMatch = skillMd.match(/^name:\s*(.+)$/m);
+  const skillName = skillJson.name || (fmNameMatch && fmNameMatch[1].trim()) || (nameMatch && nameMatch[1].trim()) || path.basename(absDir);
+
+  // Extract description from SKILL.md frontmatter or skill.json
+  const fmDescMatch = skillMd.match(/^description:\s*(.+)$/m);
+  const description = skillJson.description || (fmDescMatch && fmDescMatch[1].trim()) || '';
+
+  // Build slug from name
+  const slug = skillName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
   const FormData = require('form-data');
   const formData = new FormData();
-  formData.append('skill_zip', buffer, {
+  formData.append('zip', buffer, {
     filename: 'skill.zip',
     contentType: 'application/zip',
   });
-  
-  // Try to extract some metadata from SKILL.md for the request
-  const nameMatch = skillMd.match(/^#\s+(.+)$/m);
-  if (nameMatch) {
-    formData.append('name', nameMatch[1].trim());
+  formData.append('name', skillName);
+  formData.append('slug', slug);
+  formData.append('description', description);
+  formData.append('tagline', skillJson.description || description.substring(0, 255));
+  formData.append('version', skillJson.version || '1.0.0');
+  formData.append('pricing_type', (skillJson.pricing && skillJson.pricing.type) || 'free');
+
+  if (skillJson.keywords) {
+    skillJson.keywords.forEach(tag => formData.append('tags[]', tag));
   }
-  
+  if (skillJson.openclaw && skillJson.openclaw.minVersion) {
+    formData.append('min_openclaw_version', skillJson.openclaw.minVersion);
+  }
+
   // Publish via API
   const result = await api.publishSkill(formData);
   

@@ -59,7 +59,8 @@ class CrabSkillAPI {
   }
 
   async getSkill(slug) {
-    return this.request(`/skills/${slug}`);
+    const data = await this.request(`/skills/${slug}`);
+    return data.skill || data;
   }
 
   async getSkillVersions(slug) {
@@ -92,7 +93,7 @@ class CrabSkillAPI {
   async register(email, name) {
     return this.request('/agent/register', {
       method: 'POST',
-      body: JSON.stringify({ email, name }),
+      body: JSON.stringify({ email, agent_name: name }),
     });
   }
 
