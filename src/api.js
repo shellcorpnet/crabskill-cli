@@ -45,7 +45,10 @@ class CrabSkillAPI {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || data.error || `HTTP ${response.status}`);
+      const err = new Error(data.message || data.error || `HTTP ${response.status}`);
+      err.code = data.code || null;
+      err.status = response.status;
+      throw err;
     }
 
     return data;
@@ -94,6 +97,13 @@ class CrabSkillAPI {
     return this.request('/agent/register', {
       method: 'POST',
       body: JSON.stringify({ email, agent_name: name }),
+    });
+  }
+
+  async login(email, password) {
+    return this.request('/agent/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
     });
   }
 

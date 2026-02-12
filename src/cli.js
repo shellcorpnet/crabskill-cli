@@ -71,7 +71,14 @@ program
                 return;
               }
             } catch (err) {
-              purchaseSpinner.fail(`Purchase failed: ${err.message}`);
+              if (err.code === 'email_not_verified') {
+                purchaseSpinner.fail('Email verification required to purchase skills.');
+                console.log(chalk.yellow('\n⚠️  Your email is not verified.'));
+                console.log(chalk.dim('   Log in at crabskill.com to verify your email, then try again.'));
+                console.log(chalk.dim('   Or run: ') + chalk.cyan('crabskill login') + chalk.dim(' with a verified account.'));
+              } else {
+                purchaseSpinner.fail(`Purchase failed: ${err.message}`);
+              }
               return;
             }
           }
@@ -313,35 +320,91 @@ program
 // ═══════════════════════════════════════════════════════════════════════════════
 program
   .command('login')
-  .description('Login with your API key')
+  .description('Login with your API key or email/password')
   .action(async () => {
     console.log(BANNER);
     
-    const { apiKey } = await prompts({
-      type: 'password',
-      name: 'apiKey',
-      message: 'Enter your API key:',
-      validate: v => v.length > 0 || 'API key is required',
+    const { method } = await prompts({
+      type: 'select',
+      name: 'method',
+      message: 'Login method:',
+      choices: [
+        { title: 'Email & Password', value: 'email' },
+        { title: 'API Key', value: 'apikey' },
+      ],
     });
     
-    if (!apiKey) {
+    if (!method) {
       console.log(chalk.dim('Cancelled.'));
       return;
     }
     
-    // Save temporarily to test
-    config.setApiKey(apiKey);
-    
-    const spinner = ora('Verifying...').start();
-    
-    try {
-      const user = await api.me();
-      spinner.succeed(`Logged in as ${chalk.cyan(user.name || user.email)}`);
-      console.log(chalk.dim(`\nConfig saved to: ${config.CONFIG_FILE}`));
-    } catch (err) {
-      config.setApiKey(null);
-      spinner.fail(`Invalid API key: ${err.message}`);
-      process.exit(1);
+    if (method === 'email') {
+      const creds = await prompts([
+        {
+          type: 'text',
+          name: 'email',
+          message: 'Email:',
+          validate: v => v.includes('@') || 'Enter a valid email',
+        },
+        {
+          type: 'password',
+          name: 'password',
+          message: 'Password:',
+          validate: v => v.length > 0 || 'Password is required',
+        },
+      ]);
+      
+      if (!creds.email || !creds.password) {
+        console.log(chalk.dim('Cancelled.'));
+        return;
+      }
+      
+      const spinner = ora('Logging in...').start();
+      try {
+        const result = await api.login(creds.email, creds.password);
+        config.setApiKey(result.api_key);
+        spinner.succeed(`Logged in as ${chalk.cyan(result.username)}`);
+        if (!result.email_verified) {
+          console.log(chalk.yellow('\n⚠️  Your email is not verified.'));
+          console.log(chalk.dim('   Publishing and purchasing require a verified email.'));
+          console.log(chalk.dim('   Check your inbox or log in at crabskill.com to resend.'));
+        }
+        console.log(chalk.dim(`\nConfig saved to: ${config.CONFIG_FILE}`));
+      } catch (err) {
+        spinner.fail(`Login failed: ${err.message}`);
+        process.exit(1);
+      }
+    } else {
+      const { apiKey } = await prompts({
+        type: 'password',
+        name: 'apiKey',
+        message: 'Enter your API key:',
+        validate: v => v.length > 0 || 'API key is required',
+      });
+      
+      if (!apiKey) {
+        console.log(chalk.dim('Cancelled.'));
+        return;
+      }
+      
+      config.setApiKey(apiKey);
+      
+      const spinner = ora('Verifying...').start();
+      try {
+        const user = await api.me();
+        spinner.succeed(`Logged in as ${chalk.cyan(user.name || user.email)}`);
+        if (!user.email_verified) {
+          console.log(chalk.yellow('\n⚠️  Your email is not verified.'));
+          console.log(chalk.dim('   Publishing and purchasing require a verified email.'));
+          console.log(chalk.dim('   Check your inbox or log in at crabskill.com to resend.'));
+        }
+        console.log(chalk.dim(`\nConfig saved to: ${config.CONFIG_FILE}`));
+      } catch (err) {
+        config.setApiKey(null);
+        spinner.fail(`Invalid API key: ${err.message}`);
+        process.exit(1);
+      }
     }
   });
 
@@ -441,7 +504,14 @@ program
       }
       
     } catch (err) {
-      spinner.fail(`Publish failed: ${err.message}`);
+      if (err.code === 'email_not_verified') {
+        spinner.fail('Email verification required to publish skills.');
+        console.log(chalk.yellow('\n⚠️  Your email is not verified.'));
+        console.log(chalk.dim('   Log in at crabskill.com to verify your email, then try again.'));
+        console.log(chalk.dim('   Or run: ') + chalk.cyan('crabskill login') + chalk.dim(' with a verified account.'));
+      } else {
+        spinner.fail(`Publish failed: ${err.message}`);
+      }
       process.exit(1);
     }
   });
