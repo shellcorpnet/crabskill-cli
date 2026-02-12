@@ -114,7 +114,14 @@ async function publishSkill(directory) {
   formData.append('description', description);
   formData.append('tagline', skillJson.description || description.substring(0, 255));
   formData.append('version', skillJson.version || '1.0.0');
-  formData.append('pricing_type', skillJson.pricing_type || (skillJson.pricing && skillJson.pricing.type) || 'free');
+  const pricingType = skillJson.pricing_type || (skillJson.pricing && skillJson.pricing.type) || 'free';
+  formData.append('pricing_type', pricingType);
+
+  // Send price if paid
+  const priceCents = skillJson.price_cents || (skillJson.pricing && skillJson.pricing.price_cents);
+  if (priceCents && pricingType !== 'free') {
+    formData.append('price_cents', String(priceCents));
+  }
 
   // Category (slug or name)
   if (skillJson.category) {
